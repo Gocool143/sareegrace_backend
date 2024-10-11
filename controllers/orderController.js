@@ -1,5 +1,6 @@
 const Order = require('../models/Order'); // Assuming you've created an Order model
 const Product = require('../models/Product'); // For checking stock, etc.
+const User = require('../models/User'); // For checking stock, etc.
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 // Initialize Razorpay
@@ -7,15 +8,16 @@ const razorpay = new Razorpay({
   key_id: 'rzp_test_ivWzdPIycsYIPZ',
   key_secret: 'tjcAq3O7zsmi6WpghuEM4sYI',
 });
+const { sendOrderConfirmationEmail } = require('../utils/mailService');
 // Create a new order
 const createOrder = async (req, res) => {
   try {
-    const { orderItems, shippingAddress, paymentMethod, itemsPrice, shippingPrice, totalPrice } = req.body;
+    const { orderItems, shippingAddress, paymentMethod, itemsPrice, shippingPrice, totalPrice,isPaid } = req.body;
 console.log("req.body =>",req.body);
 console.log("shippingAddress=>",shippingAddress);
 
     const order = new Order({
-      userId: '66f7ec95cb9dacb7c96599af', // Assuming req.user contains authenticated user data
+      userId: req.body.user, // Assuming req.user contains authenticated user data
       orderItems,
       shippingAddress,
       paymentMethod,
@@ -23,11 +25,22 @@ console.log("shippingAddress=>",shippingAddress);
       shippingPrice,
       totalPrice,
       orderStatus: 'pending',
-      paymentStatus: 'pending'
+      isPaid
     });
-
+    let userDoc = await User.findOne({ _id:req.body.user});
+    console.log("userDoc =>",userDoc.email);
+    let customerEmail = userDoc.email
     const createdOrder = await order.save();
-    res.status(201).json(createdOrder);
+    await sendOrderConfirmationEmail(customerEmail, {
+      orderId: createdOrder._id,
+      totalAmount: createdOrder.totalPrice,
+      shippingAddress: createdOrder.shippingAddress,
+    });
+    res.status(201).json({
+      message: 'Order placed successfully!',
+      order: createdOrder,
+    });
+    // res.status(201).json(createdOrder);
   } catch (error) {
     console.log("error =>",error);
     
@@ -131,7 +144,12 @@ const getUserOrders = async (req, res) => {
 // Get all orders (admin)
 const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find().populate('userId', 'name email');
+    // const orders = await Order.find().populate('userId', 'name email');
+    const orders = await Order.find()
+      .populate('userId', 'firstName email phoneNumber') // Populate user fields you want to show
+      .populate('orderItems.product'); // Populate product fields if needed
+
+    // res.status(200).json(orders);
     res.status(200).json(orders);
   } catch (error) {
     res.status(400).json({ message: 'Failed to retrieve all orders', error });

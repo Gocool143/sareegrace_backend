@@ -85,7 +85,6 @@ exports.getAllProducts = async (req, res) => {
                 filter.category = category; // Assuming category is stored as an ID (ObjectId) in the product schema
             }
         }
-console.log('filter =>',filter);
 
         // Fetch filtered and sorted products
         const products = await Product.find(filter)
