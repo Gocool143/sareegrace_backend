@@ -18,19 +18,19 @@ router.post('/create', createOrder);
 router.post('/verify-payment',verifyPayment );
 
 // Get a specific order by ID
-router.get('/:orderId', isAuthenticated, getOrderById);
+router.get('/:orderId', getOrderById);
 
 // Update order status (admin or user)
-router.put('/:orderId', isAuthenticated, updateOrderStatus);
+router.put('/:orderId',  updateOrderStatus);
 
 // Get all orders by a specific user
-router.get('/user/:userId', isAuthenticated, getUserOrders);
+router.get('/user/:userId',  getUserOrders);
 
 // Cancel an order (by user)
-router.put('/:orderId/cancel', isAuthenticated, cancelOrder);
+router.put('/:orderId/cancel', cancelOrder);
 
 // Get all orders (admin only)
-router.get('/', isAuthenticated, isAdmin, getAllOrders);
+router.get('/',  getAllOrders);
 
 // Update payment status (admin or webhook)
 router.put('/:orderId/payment', updatePaymentStatus);
