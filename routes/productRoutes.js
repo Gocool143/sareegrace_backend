@@ -6,8 +6,8 @@ const { createOrUpdateProduct } = require('../controllers/productController');
 const { upload } = require('../utils/cloudinary');
 
 // Create or Update Product
-router.post('/', upload.array('images', 5), createOrUpdateProduct);
-router.put('/:id', upload.array('images', 5), createOrUpdateProduct);
+router.post('/', upload.array('images', 10), createOrUpdateProduct);
+router.put('/:id', upload.array('images', 10), createOrUpdateProduct);
 
 // All Products
 router.get('/', getAllProducts);

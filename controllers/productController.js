@@ -42,75 +42,157 @@ exports.createOrUpdateProduct = async (req, res) => {
 };
 
 // Get All Products with Filters, Sorting, Pagination, and Search
+// exports.getAllProducts = async (req, res) => {
+//     try {
+//         // Destructure query parameters from the request
+//         const { page = 1, limit = 10, sortBy = 'latest', minPrice = 0, maxPrice = 5000, category, search } = req.query;
+
+//         // Define sorting logic
+//         let sortOption;
+//         switch (sortBy) {
+//             case 'priceLowToHigh':
+//                 sortOption = { price: 1 }; // Sort by price ascending
+//                 break;
+//             case 'priceHighToLow':
+//                 sortOption = { price: -1 }; // Sort by price descending
+//                 break;
+//             case 'newArrivals':
+//                 sortOption = { createdAt: -1 }; // Sort by newest arrivals
+//                 break;
+//             default:
+//                 sortOption = { createdAt: -1 }; // Default to latest products
+//         }
+
+//         // Pagination logic
+//         const itemsPerPage = parseInt(limit);
+//         const skipItems = (parseInt(page) - 1) * itemsPerPage;
+
+//         // Create filter object based on query parameters
+//         let filter = {};
+
+//         // If search query is provided, filter products by search terms
+//         if (search) {
+//             filter.$or = [
+//                 { name: { $regex: search, $options: 'i' } }, // Case-insensitive search in product name
+//                 { description: { $regex: search, $options: 'i' } } // Case-insensitive search in product description
+//             ];
+//         } else {
+//             // If no search term, apply other filters
+//             filter.price = { $gte: minPrice, $lte: maxPrice }; // Filter by price range
+
+//             // If category is provided, add it to the filter
+//             if (category) {
+//                 filter.category = category; // Assuming category is stored as an ID (ObjectId) in the product schema
+//             }
+//         }
+
+//         // Fetch filtered and sorted products
+//         const products = await Product.find(filter)
+//             .sort(sortOption)
+//             .skip(skipItems)
+//             .limit(itemsPerPage);
+
+//         // Get total product count for pagination purposes
+//         const totalProducts = await Product.countDocuments(filter);
+
+//         const hasMore = skipItems + products.length < totalProducts;
+
+//         // Send products with pagination info
+//         res.status(200).json({
+//             products,
+//             currentPage: parseInt(page),
+//             totalProducts,
+//             totalPages: Math.ceil(totalProducts / itemsPerPage),
+//             hasMore
+//         });
+//     } catch (error) {
+//         console.error("Error fetching products:", error);
+//         res.status(500).json({ message: 'Error fetching products' });
+//     }
+// };
 exports.getAllProducts = async (req, res) => {
     try {
-        // Destructure query parameters from the request
-        const { page = 1, limit = 10, sortBy = 'latest', minPrice = 0, maxPrice = 5000, category, search } = req.query;
-
-        // Define sorting logic
-        let sortOption;
-        switch (sortBy) {
-            case 'priceLowToHigh':
-                sortOption = { price: 1 }; // Sort by price ascending
-                break;
-            case 'priceHighToLow':
-                sortOption = { price: -1 }; // Sort by price descending
-                break;
-            case 'newArrivals':
-                sortOption = { createdAt: -1 }; // Sort by newest arrivals
-                break;
-            default:
-                sortOption = { createdAt: -1 }; // Default to latest products
+      // Destructure query parameters from the request
+      const {
+        page = 1,
+        limit = 10,
+        sortBy = 'latest',
+        minPrice = 0,
+        maxPrice = 5000,
+        category,
+        search,
+      } = req.query;
+  
+      // Define sorting logic
+      let sortOption;
+      switch (sortBy) {
+        case 'priceLowToHigh':
+          sortOption = { price: 1 }; // Sort by price ascending
+          break;
+        case 'priceHighToLow':
+          sortOption = { price: -1 }; // Sort by price descending
+          break;
+        case 'newArrivals':
+          sortOption = { createdAt: -1 }; // Sort by newest arrivals
+          break;
+        default:
+          sortOption = { createdAt: -1 }; // Default to latest products
+      }
+  
+      // Pagination logic
+      const itemsPerPage = parseInt(limit);
+      const skipItems = (parseInt(page) - 1) * itemsPerPage;
+  
+      // Create filter object based on query parameters
+      let filter = {};
+  
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+        ];
+      } else {
+        filter.price = { $gte: minPrice, $lte: maxPrice };
+  
+        if (category) {
+          filter.category = category; // Assuming category is stored as an ID
         }
-
-        // Pagination logic
-        const itemsPerPage = parseInt(limit);
-        const skipItems = (parseInt(page) - 1) * itemsPerPage;
-
-        // Create filter object based on query parameters
-        let filter = {};
-
-        // If search query is provided, filter products by search terms
-        if (search) {
-            filter.$or = [
-                { name: { $regex: search, $options: 'i' } }, // Case-insensitive search in product name
-                { description: { $regex: search, $options: 'i' } } // Case-insensitive search in product description
-            ];
-        } else {
-            // If no search term, apply other filters
-            filter.price = { $gte: minPrice, $lte: maxPrice }; // Filter by price range
-
-            // If category is provided, add it to the filter
-            if (category) {
-                filter.category = category; // Assuming category is stored as an ID (ObjectId) in the product schema
-            }
-        }
-
-        // Fetch filtered and sorted products
-        const products = await Product.find(filter)
-            .sort(sortOption)
-            .skip(skipItems)
-            .limit(itemsPerPage);
-
-        // Get total product count for pagination purposes
-        const totalProducts = await Product.countDocuments(filter);
-
-        const hasMore = skipItems + products.length < totalProducts;
-
-        // Send products with pagination info
-        res.status(200).json({
-            products,
-            currentPage: parseInt(page),
-            totalProducts,
-            totalPages: Math.ceil(totalProducts / itemsPerPage),
-            hasMore
-        });
+      }
+  
+      let products;
+  
+      // If 'bestSelling' is the sort option, fetch random products
+      if (sortBy === 'bestSelling') {
+        products = await Product.aggregate([
+          { $match: filter }, // Apply the filters
+          { $sample: { size: itemsPerPage } }, // Get random products
+        ]);
+      } else {
+        // Fetch filtered, sorted, and paginated products
+        products = await Product.find(filter)
+          .sort(sortOption)
+          .skip(skipItems)
+          .limit(itemsPerPage);
+      }
+  
+      // Get total product count (useful for pagination)
+      const totalProducts = await Product.countDocuments(filter);
+      const hasMore = skipItems + products.length < totalProducts;
+  
+      // Send the products along with pagination info
+      res.status(200).json({
+        products,
+        currentPage: parseInt(page),
+        totalProducts,
+        totalPages: Math.ceil(totalProducts / itemsPerPage),
+        hasMore,
+      });
     } catch (error) {
-        console.error("Error fetching products:", error);
-        res.status(500).json({ message: 'Error fetching products' });
+      console.error('Error fetching products:', error);
+      res.status(500).json({ message: 'Error fetching products' });
     }
-};
-
+  };
+  
 
 
 
